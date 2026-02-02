@@ -44,7 +44,25 @@
 
 #include <rtems/libio_.h>
 
+#include <inttypes.h>
+#include <rtems/score/threadimpl.h>
+#ifdef RTEMSCFG_MNT_CONTAINER
+#include <rtems/score/mntContainer.h>
+#endif
+
 RTEMS_CHAIN_DEFINE_EMPTY(rtems_filesystem_mount_table);
+
+rtems_chain_control *get_mount_table(void)
+{
+#ifdef RTEMSCFG_MNT_CONTAINER
+    MntContainer *container = get_current_thread_mnt_container();
+    if (container){
+      return &container->mountList;
+    }
+#else
+    return &rtems_filesystem_mount_table;
+#endif
+}
 
 const rtems_filesystem_limits_and_options_t rtems_filesystem_default_pathconf = {
    5,    /* link_max: count */
@@ -139,8 +157,10 @@ static int register_subordinate_file_system(
     rv = (*mt_point_node->location.mt_entry->ops->mount_h)( mt_entry );
     if ( rv == 0 ) {
       rtems_filesystem_mt_lock();
+      rtems_chain_control *mount_table = get_mount_table();
       rtems_chain_append_unprotected(
-        &rtems_filesystem_mount_table,
+        // &rtems_filesystem_mount_table,
+        mount_table,
         &mt_entry->mt_node
       );
       rtems_filesystem_mt_unlock();
@@ -164,9 +184,10 @@ static int register_root_file_system(
   int rv = 0;
 
   rtems_filesystem_mt_lock();
-  if ( rtems_chain_is_empty( &rtems_filesystem_mount_table ) ) {
+  if ( rtems_chain_is_empty( get_mount_table() ) ) {
     rtems_chain_append_unprotected(
-      &rtems_filesystem_mount_table,
+      // &rtems_filesystem_mount_table,
+      get_mount_table(),
       &mt_entry->mt_node
     );
   } else {

@@ -45,12 +45,27 @@ static bool contains_root_or_current_directory(
   const rtems_filesystem_mount_table_entry_t *mt_entry
 )
 {
+#ifdef RTEMSCFG_MNT_CONTAINER
+  rtems_filesystem_global_location_t *container_root = get_container_root_location();
+  rtems_filesystem_global_location_t *container_current = get_container_current_location();
+  
+  const rtems_filesystem_location_info_t *root =
+    &container_root->location;
+  const rtems_filesystem_location_info_t *current =
+    &container_current->location;
+
+  bool is_root_fs = (mt_entry->target == NULL || 
+                     (mt_entry->target[0] == '/' && mt_entry->target[1] == '\0'));
+  
+  return (is_root_fs && mt_entry == root->mt_entry) || mt_entry == current->mt_entry;
+#else
   const rtems_filesystem_location_info_t *root =
     &rtems_filesystem_root->location;
   const rtems_filesystem_location_info_t *current =
     &rtems_filesystem_current->location;
 
   return mt_entry == root->mt_entry || mt_entry == current->mt_entry;
+#endif
 }
 
 /**
@@ -73,15 +88,59 @@ int unmount( const char *path )
       const rtems_filesystem_operations_table *mt_point_ops =
         mt_entry->mt_point_node->location.mt_entry->ops;
 
+#ifdef RTEMSCFG_MNT_CONTAINER
+      Thread_Control *executing = _Thread_Get_executing();
+      if (executing && executing->container && executing->container->mntContainer) {
+        rv = 0;
+      } else {
+        rv = (*mt_point_ops->unmount_h)( mt_entry );
+      }
+#else
       rv = (*mt_point_ops->unmount_h)( mt_entry );
+#endif
+
       if ( rv == 0 ) {
         rtems_id self_task_id = rtems_task_self();
         rtems_filesystem_mt_entry_declare_lock_context( lock_context );
+#ifdef RTEMSCFG_MNT_CONTAINER
+        Thread_Control *executing = _Thread_Get_executing();
+        bool is_container_unmount = false;
+        if (executing && executing->container && executing->container->mntContainer) {
+          is_container_unmount = true;
 
+          rtems_filesystem_global_location_t *fs_root = mt_entry->mt_fs_root;
+          bool has_other_refs = (fs_root && fs_root->reference_count >= 2);
+          
+          if (has_other_refs) {
+            rtems_filesystem_mt_entry_lock( lock_context );
+            rtems_chain_extract_unprotected(&mt_entry->mt_node);
+            mt_entry->unmount_task = self_task_id;
+            mt_entry->mounted = false;
+            
+            if (fs_root) {
+              fs_root->reference_count--;
+            }
+            rtems_filesystem_mt_entry_unlock( lock_context );
+          } else {
+            rtems_filesystem_mt_entry_lock( lock_context );
+            rtems_chain_extract_unprotected(&mt_entry->mt_node);
+            mt_entry->unmount_task = self_task_id;
+            mt_entry->mounted = false;
+            
+            rtems_filesystem_global_location_t *null_loc = 
+              rtems_filesystem_global_location_obtain_null();
+            rtems_filesystem_global_location_assign(&mt_entry->mt_fs_root, null_loc);
+            rtems_filesystem_mt_entry_unlock( lock_context );
+          }
+        } else {
+#endif
         rtems_filesystem_mt_entry_lock( lock_context );
         mt_entry->unmount_task = self_task_id;
         mt_entry->mounted = false;
         rtems_filesystem_mt_entry_unlock( lock_context );
+#ifdef RTEMSCFG_MNT_CONTAINER
+        }
+#endif      
       }
     } else {
       errno = EBUSY;

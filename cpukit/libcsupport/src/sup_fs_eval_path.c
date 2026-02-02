@@ -40,6 +40,17 @@
 
 #include <string.h>
 
+#ifdef RTEMSCFG_MNT_CONTAINER
+typedef struct MntContainer MntContainer;
+extern MntContainer *get_current_mnt_container(void);
+#endif
+
+extern rtems_filesystem_global_location_t *get_container_root_location(void);
+extern rtems_filesystem_global_location_t *get_container_current_location(void);
+extern void set_current_eval_path(const char *path);
+extern void clear_current_eval_path(void);
+extern const char *get_adjusted_eval_path(void);
+
 static size_t get_parentpathlen(const char *path, size_t pathlen)
 {
   while (pathlen > 0) {
@@ -69,13 +80,46 @@ static void set_startloc(
     if (rtems_filesystem_is_delimiter(c)) {
       ++ctx->path;
       --ctx->pathlen;
-      ctx->startloc = rtems_filesystem_global_location_obtain(
-        &ctx->rootloc
-      );
+
+#ifdef RTEMSCFG_MNT_CONTAINER
+      const char *adjusted_path = get_adjusted_eval_path();
+      if (adjusted_path && adjusted_path != ctx->path) {
+        if (adjusted_path[0] == '/') {
+          ctx->path = adjusted_path + 1;
+          ctx->pathlen = strlen(ctx->path);
+        } else if (adjusted_path[0] == '\0') {
+          ctx->path = "";
+          ctx->pathlen = 0;
+        } else {
+          ctx->path = adjusted_path;
+          ctx->pathlen = strlen(ctx->path);
+        }
+      }
+#endif
+
+    //   ctx->startloc = rtems_filesystem_global_location_obtain(
+    //     &ctx->rootloc
+    //   );
+    // } else {
+    //   ctx->startloc = rtems_filesystem_global_location_obtain(
+    //     global_current_ptr
+    //   );
+    // }
+      ctx->startloc = ctx->rootloc;
+      if (ctx->startloc && !rtems_filesystem_global_location_is_null(ctx->startloc)) {
+        ++ctx->startloc->reference_count;
+      }
     } else {
-      ctx->startloc = rtems_filesystem_global_location_obtain(
-        global_current_ptr
-      );
+      ctx->startloc = global_current_ptr;
+      
+      if (!ctx->startloc || 
+          !ctx->startloc->location.mt_entry ||
+          ctx->startloc->reference_count <= 0) {
+        if (ctx->startloc) {
+          rtems_filesystem_global_location_release(ctx->startloc, true);
+        }
+        ctx->startloc = rtems_filesystem_global_location_obtain(&rtems_filesystem_current);
+      }
     }
   } else {
     ctx->rootloc = rtems_filesystem_global_location_obtain_null();
@@ -186,6 +230,55 @@ rtems_filesystem_eval_path_start(
   int eval_flags
 )
 {
+#ifdef RTEMSCFG_MNT_CONTAINER
+  set_current_eval_path(path);
+  
+  rtems_filesystem_global_location_t *container_root_loc = get_container_root_location();
+  rtems_filesystem_global_location_t *container_current_loc = get_container_current_location();
+  
+  if (rtems_filesystem_global_location_is_null(container_root_loc) ||
+      rtems_filesystem_global_location_is_null(container_current_loc)) {
+    memset(ctx, 0, sizeof(*ctx));
+    ctx->path = path;
+    ctx->pathlen = 0;
+    ctx->flags = eval_flags;
+    
+    ctx->rootloc = rtems_filesystem_global_location_obtain_null();
+    ctx->startloc = rtems_filesystem_global_location_obtain_null();
+    
+    rtems_filesystem_instance_lock(&ctx->startloc->location);
+    rtems_filesystem_location_clone(
+      &ctx->currentloc,
+      &ctx->startloc->location
+    );
+    
+    rtems_filesystem_eval_path_error(ctx, ENOENT);
+    
+    return &ctx->currentloc;
+  }
+  
+  const char *adjusted_path = get_adjusted_eval_path();
+  const char *effective_path = adjusted_path ? adjusted_path : path;
+  size_t effective_pathlen = strlen(effective_path);
+  
+  memset(ctx, 0, sizeof(*ctx));
+  ctx->path = effective_path;
+  ctx->pathlen = effective_pathlen;
+  ctx->flags = eval_flags;
+  
+  set_startloc(ctx, container_root_loc, container_current_loc);
+  
+  rtems_filesystem_instance_lock(&ctx->startloc->location);
+  
+  rtems_filesystem_location_clone(
+    &ctx->currentloc,
+    &ctx->startloc->location
+  );
+  
+  rtems_filesystem_eval_path_continue(ctx);
+
+  return &ctx->currentloc;
+#else
   return rtems_filesystem_eval_path_start_with_root_and_current(
     ctx,
     path,
@@ -194,6 +287,7 @@ rtems_filesystem_eval_path_start(
     &rtems_filesystem_root,
     &rtems_filesystem_current
   );
+#endif
 }
 
 rtems_filesystem_location_info_t *
@@ -224,6 +318,28 @@ rtems_filesystem_eval_path_start_with_parent(
     }
   }
 
+#ifdef RTEMSCFG_MNT_CONTAINER
+  rtems_filesystem_global_location_t *container_root = get_container_root_location();
+  rtems_filesystem_global_location_t *container_current = get_container_current_location();
+
+  if (!container_root || rtems_filesystem_global_location_is_null(container_root)) {
+    container_root = rtems_filesystem_root;
+  }
+  
+  if (!container_current || rtems_filesystem_global_location_is_null(container_current)) {
+    container_current = rtems_filesystem_current;
+  }
+
+  currentloc = rtems_filesystem_eval_path_start_with_root_and_current(
+    ctx,
+    parentpath,
+    parentpathlen,
+    parent_eval_flags,
+    &container_root,
+    &container_current
+  );
+#else
+
   currentloc = rtems_filesystem_eval_path_start_with_root_and_current(
     ctx,
     parentpath,
@@ -232,6 +348,8 @@ rtems_filesystem_eval_path_start_with_parent(
     &rtems_filesystem_root,
     &rtems_filesystem_current
   );
+
+#endif
 
   rtems_filesystem_location_clone(parentloc, currentloc);
 
@@ -316,6 +434,10 @@ void rtems_filesystem_eval_path_cleanup(
   rtems_filesystem_instance_unlock(&ctx->startloc->location);
   rtems_filesystem_global_location_release(ctx->startloc, false);
   rtems_filesystem_global_location_release(ctx->rootloc, false);
+
+#ifdef RTEMSCFG_MNT_CONTAINER
+  clear_current_eval_path();
+#endif
 }
 
 void rtems_filesystem_eval_path_cleanup_with_parent(
