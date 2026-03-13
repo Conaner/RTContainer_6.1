@@ -6,12 +6,15 @@ copyrights:
 cppflags: []
 cxxflags: []
 enabled-by: RTEMSCFG_NET_CONTAINER
-includes: []
+includes:
+- cpukit/libnetworking
 install:
 - destination: ${BSP_INCLUDEDIR}/rtems/score
   source:
   - cpukit/include/rtems/score/netContainer.h
-links: []
+links:
+- role: build-dependency
+  uid: objlibnetworking
 source:
 - cpukit/score/src/netContainer.c
 type: build

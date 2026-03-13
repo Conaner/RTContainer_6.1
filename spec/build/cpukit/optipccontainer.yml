@@ -1,7 +1,8 @@
 SPDX-License-Identifier: CC-BY-SA-4.0 OR BSD-2-Clause
 actions:
-- set-value: true
+- get-boolean: null
 - env-enable: null
+- define-condition: null
 build-type: option
 copyrights:
 - Copyright (C) 2026 RTEMS Container Project

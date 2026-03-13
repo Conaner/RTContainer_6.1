@@ -40,6 +40,9 @@
 #include <errno.h>
 
 #include <rtems/libio_.h>
+#ifdef RTEMSCFG_MNT_CONTAINER
+#include <rtems/score/threadimpl.h>
+#endif
 
 static bool contains_root_or_current_directory(
   const rtems_filesystem_mount_table_entry_t *mt_entry

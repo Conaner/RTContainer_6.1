@@ -56,12 +56,11 @@ rtems_chain_control *get_mount_table(void)
 {
 #ifdef RTEMSCFG_MNT_CONTAINER
     MntContainer *container = get_current_thread_mnt_container();
-    if (container){
+    if (container) {
       return &container->mountList;
     }
-#else
-    return &rtems_filesystem_mount_table;
 #endif
+    return &rtems_filesystem_mount_table;
 }
 
 const rtems_filesystem_limits_and_options_t rtems_filesystem_default_pathconf = {

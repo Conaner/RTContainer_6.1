@@ -44,6 +44,9 @@
 #include <unistd.h>
 
 #include <rtems/libio_.h>
+#ifdef RTEMSCFG_MNT_CONTAINER
+#include <rtems/score/threadimpl.h>
+#endif
 
 int rtems_filesystem_chdir(rtems_filesystem_location_info_t *loc)
 {
@@ -81,6 +84,8 @@ int rtems_filesystem_chdir(rtems_filesystem_location_info_t *loc)
     rv = -1;
   }
 
+  return rv;
+}
 
 int chdir( const char *path )
 {

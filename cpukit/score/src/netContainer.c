@@ -247,7 +247,7 @@ NetContainer *rtems_net_container_create(void)
         return NULL;
     }
 
-    netContainer->rc = 0; // 初始引用计数为0
+    netContainer->rc = 1; // 初始引用计数为1，创建者持有一个引用
     netContainer->containerID = ++g_netContainerId;
     
     // 创建net_group

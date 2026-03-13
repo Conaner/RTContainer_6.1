@@ -129,7 +129,6 @@ static inline void _POSIX_Message_queue_Free(
   _Objects_Free( &_POSIX_Message_queue_Information, &the_mq->Object );
 #endif
 }
-}
 
 
 static inline POSIX_Message_queue_Control *_POSIX_Message_queue_Get(
