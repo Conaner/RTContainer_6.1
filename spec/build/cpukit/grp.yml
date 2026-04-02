@@ -27,6 +27,8 @@ links:
 - role: build-dependency
   uid: libmghttpd
 - role: build-dependency
+  uid: objcgroup
+- role: build-dependency
   uid: librtemscpu
 - role: build-dependency
   uid: librtemscxx

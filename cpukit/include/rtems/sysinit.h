@@ -154,6 +154,7 @@ void _Sysinit_Verbose( void );
 #define RTEMS_SYSINIT_CLASSIC_USER_TASKS         002900
 #define RTEMS_SYSINIT_POSIX_USER_THREADS         002a00
 #define RTEMS_SYSINIT_STD_FILE_DESCRIPTORS       002b00
+#define RTEMS_SYSINIT_CLASSIC_CGROUP             002c00
 #define RTEMS_SYSINIT_LAST                       ffffff
 
 /*

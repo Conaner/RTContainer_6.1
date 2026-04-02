@@ -82,6 +82,10 @@
 #include <rtems/rtems/timer.h>
 #include <rtems/rtems/types.h>
 
+#ifdef RTEMS_CGROUP
+#include <rtems/rtems/cgroup.h>
+#endif
+
 #if defined(RTEMS_MULTIPROCESSING)
   #include <rtems/rtems/mp.h>
 #endif

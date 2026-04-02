@@ -1,0 +1,16 @@
+*** BEGIN OF TEST CGTESTS1 STATE TRANSFORM ***
+*** TEST VERSION: 5.1.0.81a1bd50a9031c068b5cd359f20778ffc97a6b7f-modified
+*** TEST STATE: EXPECTED_PASS
+*** TEST BUILD: RTEMS_POSIX_API
+*** TEST TOOLS: 7.5.0 20191114 (RTEMS 5, RSB 5.not_released, Newlib 7947581)
+==================START CGTESTs1: STATE TRANSFORM=================
+==================CGROUP created successfully, id is 1241579521!====================
+===================== CG STATE IS READY=====================
+==================Transform STATE TO RUNNING====================
+===================== CG STATE IS RUNNING=====================
+===================Transform STATE TO BLOCKED ====================
+===================== CG STATE IS BLOCKED=====================
+===================Transform STATE TO READY=======================
+===================== CG STATE IS READY=====================
+
+*** END OF TEST CGTESTS1 STATE TRANSFORM ***

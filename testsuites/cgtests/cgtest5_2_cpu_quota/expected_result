@@ -1,0 +1,82 @@
+*** BEGIN OF TEST CGTEST5-2 CPU QUOTA ***
+*** TEST VERSION: 6.0.0.ac63316696cb425f15633da01310bbe51f187dc6-modified
+*** TEST STATE: EXPECTED_PASS
+*** TEST BUILD: RTEMS_POSIX_API
+*** TEST TOOLS: 13.3.0 20240521 (RTEMS 6, RSB 3814cb0e7f86cca2be403eac831f9bf571984659, Newlib 1b3dcfd)
+[Ticks:0] Config: 1 cgroup, 4 tasks, quota=100 ticks, period=300 ticks
+[Ticks:0] Task 0 assigned to CG1, quota available=100 ticks
+[Ticks:0] Task 1 assigned to CG1, quota available=100 ticks
+[Ticks:0] Task 2 assigned to CG1, quota available=100 ticks
+[Ticks:0] Task 3 assigned to CG1, quota available=100 ticks
+[Ticks:0] Init waiting for all tasks and monitor events
+[Ticks:0] Task 3 started in CG1
+[Ticks:100] Task 0 entered cgroup CPU quota throttling in CG1
+[Ticks:100] Task 1 entered cgroup CPU quota throttling in CG1
+[Ticks:100] Task 2 entered cgroup CPU quota throttling in CG1
+[Ticks:100] Task 3 entered cgroup CPU quota throttling in CG1
+[Ticks:300] Task 0 left cgroup CPU quota throttling in CG1
+[Ticks:300] Task 1 left cgroup CPU quota throttling in CG1
+[Ticks:300] Task 2 left cgroup CPU quota throttling in CG1
+[Ticks:300] Task 3 left cgroup CPU quota throttling in CG1
+[Ticks:400] Task 0 entered cgroup CPU quota throttling in CG1
+[Ticks:400] Task 1 entered cgroup CPU quota throttling in CG1
+[Ticks:400] Task 2 entered cgroup CPU quota throttling in CG1
+[Ticks:400] Task 3 entered cgroup CPU quota throttling in CG1
+[Ticks:600] Task 0 left cgroup CPU quota throttling in CG1
+[Ticks:600] Task 1 left cgroup CPU quota throttling in CG1
+[Ticks:600] Task 2 left cgroup CPU quota throttling in CG1
+[Ticks:600] Task 3 left cgroup CPU quota throttling in CG1
+[Ticks:700] Task 0 entered cgroup CPU quota throttling in CG1
+[Ticks:700] Task 1 entered cgroup CPU quota throttling in CG1
+[Ticks:700] Task 2 entered cgroup CPU quota throttling in CG1
+[Ticks:700] Task 3 entered cgroup CPU quota throttling in CG1
+[Ticks:900] Task 0 left cgroup CPU quota throttling in CG1
+[Ticks:900] Task 1 left cgroup CPU quota throttling in CG1
+[Ticks:900] Task 2 left cgroup CPU quota throttling in CG1
+[Ticks:900] Task 3 left cgroup CPU quota throttling in CG1
+[Ticks:1000] Task 0 entered cgroup CPU quota throttling in CG1
+[Ticks:1000] Task 1 entered cgroup CPU quota throttling in CG1
+[Ticks:1000] Task 2 entered cgroup CPU quota throttling in CG1
+[Ticks:1000] Task 3 entered cgroup CPU quota throttling in CG1
+[Ticks:1200] Task 0 left cgroup CPU quota throttling in CG1
+[Ticks:1200] Task 1 left cgroup CPU quota throttling in CG1
+[Ticks:1200] Task 2 left cgroup CPU quota throttling in CG1
+[Ticks:1200] Task 3 left cgroup CPU quota throttling in CG1
+[Ticks:1201] Task 3 finished in CG1, cgroup quota available=99 ticks
+[Ticks:1201] Task 2 started in CG1
+[Ticks:1300] Task 0 entered cgroup CPU quota throttling in CG1
+[Ticks:1300] Task 1 entered cgroup CPU quota throttling in CG1
+[Ticks:1300] Task 2 entered cgroup CPU quota throttling in CG1
+[Ticks:1500] Task 0 left cgroup CPU quota throttling in CG1
+[Ticks:1500] Task 1 left cgroup CPU quota throttling in CG1
+[Ticks:1500] Task 2 left cgroup CPU quota throttling in CG1
+[Ticks:1600] Task 0 entered cgroup CPU quota throttling in CG1
+[Ticks:1600] Task 1 entered cgroup CPU quota throttling in CG1
+[Ticks:1600] Task 2 entered cgroup CPU quota throttling in CG1
+[Ticks:1800] Task 0 left cgroup CPU quota throttling in CG1
+[Ticks:1800] Task 1 left cgroup CPU quota throttling in CG1
+[Ticks:1800] Task 2 left cgroup CPU quota throttling in CG1
+[Ticks:1900] Task 0 entered cgroup CPU quota throttling in CG1
+[Ticks:1900] Task 1 entered cgroup CPU quota throttling in CG1
+[Ticks:1900] Task 2 entered cgroup CPU quota throttling in CG1
+[Ticks:2100] Task 0 left cgroup CPU quota throttling in CG1
+[Ticks:2100] Task 1 left cgroup CPU quota throttling in CG1
+[Ticks:2100] Task 2 left cgroup CPU quota throttling in CG1
+[Ticks:2102] Task 2 finished in CG1, cgroup quota available=98 ticks
+[Ticks:2102] Task 1 started in CG1
+[Ticks:2200] Task 0 entered cgroup CPU quota throttling in CG1
+[Ticks:2200] Task 1 entered cgroup CPU quota throttling in CG1
+[Ticks:2400] Task 0 left cgroup CPU quota throttling in CG1
+[Ticks:2400] Task 1 left cgroup CPU quota throttling in CG1
+[Ticks:2500] Task 0 entered cgroup CPU quota throttling in CG1
+[Ticks:2500] Task 1 entered cgroup CPU quota throttling in CG1
+[Ticks:2700] Task 0 left cgroup CPU quota throttling in CG1
+[Ticks:2700] Task 1 left cgroup CPU quota throttling in CG1
+[Ticks:2702] Task 1 finished in CG1, cgroup quota available=98 ticks
+[Ticks:2702] Task 0 started in CG1
+[Ticks:2800] Task 0 entered cgroup CPU quota throttling in CG1
+[Ticks:3000] Task 0 left cgroup CPU quota throttling in CG1
+[Ticks:3002] Task 0 finished in CG1, cgroup quota available=98 ticks
+[Ticks:3003] All 4 tasks finished in CGTEST5-2
+
+*** END OF TEST CGTEST5-2 CPU QUOTA ***

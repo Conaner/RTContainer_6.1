@@ -1,0 +1,30 @@
+SPDX-License-Identifier: CC-BY-SA-4.0 OR BSD-2-Clause
+build-type: objects
+cflags: []
+copyrights:
+- Copyright (C) 2026 lyc
+cppflags: []
+cxxflags: []
+enabled-by: RTEMS_CGROUP
+includes: []
+install:
+- destination: ${BSP_INCLUDEDIR}/rtems/score
+  source:
+  - cpukit/include/rtems/score/corecgroup.h
+  - cpukit/include/rtems/score/corecgroupimpl.h
+- destination: ${BSP_INCLUDEDIR}/rtems/rtems
+  source:
+  - cpukit/include/rtems/rtems/cgroup.h
+  - cpukit/include/rtems/rtems/cgroupdata.h
+  - cpukit/include/rtems/rtems/cgroupimpl.h
+links: []
+source:
+- cpukit/score/src/corecgroup.c
+- cpukit/rtems/src/cgroup.c
+- cpukit/rtems/src/cgcreate.c
+- cpukit/rtems/src/cgdelete.c
+- cpukit/rtems/src/cgaddtask.c
+- cpukit/rtems/src/cgrmtask.c
+- cpukit/rtems/src/cggetstate.c
+- cpukit/rtems/src/cggettaskcount.c
+type: build

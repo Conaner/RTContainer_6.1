@@ -40,6 +40,9 @@
 #endif
 
 #include <rtems/score/heapimpl.h>
+#ifdef RTEMS_CGROUP
+#include <rtems/score/corecgroup.h>
+#endif
 #include <rtems/score/threaddispatch.h>
 
 #ifndef HEAP_PROTECTION
@@ -222,6 +225,25 @@ bool _Heap_Free( Heap_Control *heap, void *alloc_begin_ptr )
   ++stats->frees;
   stats->free_size += block_size;
   stats->lifetime_freed += block_size;
+
+#ifdef RTEMS_CGROUP
+  {
+    CORE_cgroup_Control *cgroup = block->charged_cgroup;
+
+    if ( cgroup != NULL ) {
+      uintptr_t charge_size = block->requested_size;
+
+      if ( cgroup->should_charge_next_free ) {
+        cgroup->mem_quota_available += charge_size;
+      } else {
+        cgroup->should_charge_next_free = true;
+      }
+
+      block->requested_size = 0;
+      block->charged_cgroup = NULL;
+    }
+  }
+#endif
 
   return( true );
 }

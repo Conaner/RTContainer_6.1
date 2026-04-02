@@ -118,6 +118,23 @@ extern "C" {
 /** This macro corresponds to a task those life is changing. */
 #define STATES_LIFE_IS_CHANGING                0x00020000
 
+#ifdef RTEMS_CGROUP
+/** This macro corresponds to a task waiting for a cgroup CPU quota. */
+#define STATES_WAITING_FOR_CGROUP_CPU_QUOTA    0x00040000
+
+/** This macro corresponds to a task waiting for a cgroup memory limit. */
+#define STATES_WAITING_FOR_CGROUP_MEMORY       0x00080000
+
+/** This macro corresponds to a task waiting for a cgroup blkio limit. */
+#define STATES_WAITING_FOR_CGROUP_BLKIO        0x00100000
+
+/** This macro corresponds to a task waiting for any cgroup resource. */
+#define STATES_WAITING_FOR_CGROUP_RESOURCE \
+  ( STATES_WAITING_FOR_CGROUP_CPU_QUOTA | \
+    STATES_WAITING_FOR_CGROUP_MEMORY    | \
+    STATES_WAITING_FOR_CGROUP_BLKIO )
+#endif
+
 /** This macro corresponds to a task being held by the debugger. */
 #define STATES_DEBUGGER                        0x08000000
 
@@ -149,13 +166,21 @@ extern "C" {
                                  STATES_WAITING_FOR_RWLOCK             )
 
 /** This macro corresponds to a task waiting which is blocked. */
+#ifdef RTEMS_CGROUP
+#define _STATES_CGROUP_BLOCKED STATES_WAITING_FOR_CGROUP_RESOURCE
+#else
+#define _STATES_CGROUP_BLOCKED 0
+#endif
+
+/** This macro corresponds to a task waiting which is blocked. */
 #define STATES_BLOCKED         ( STATES_LOCALLY_BLOCKED         | \
                                  STATES_WAITING_FOR_TIME        | \
                                  STATES_WAITING_FOR_PERIOD      | \
                                  STATES_WAITING_FOR_EVENT       | \
                                  STATES_WAITING_FOR_RPC_REPLY   | \
                                  STATES_WAITING_FOR_SYSTEM_EVENT | \
-                                 STATES_INTERRUPTIBLE_BY_SIGNAL )
+                                 STATES_INTERRUPTIBLE_BY_SIGNAL | \
+                                 _STATES_CGROUP_BLOCKED )
 
 /** All state bits set to one (provided for _Thread_Start()) */
 #define STATES_ALL_SET 0xffffffff

@@ -50,6 +50,9 @@
 #include <rtems/score/threadimpl.h>
 #include <rtems/score/todimpl.h>
 #include <rtems/score/userextimpl.h>
+#ifdef RTEMS_CGROUP
+#include <rtems/score/corecgroupimpl.h>
+#endif
 #include <rtems/config.h>
 
 #if ( CPU_HARDWARE_FP == TRUE ) || ( CPU_SOFTWARE_FP == TRUE )
@@ -293,12 +296,38 @@ void _Thread_Do_dispatch( Per_CPU_Control *cpu_self, ISR_Level level )
 
   executing = cpu_self->executing;
 
+#ifdef RTEMS_CGROUP
+  if ( executing->is_added_to_cgroup ) {
+    uint64_t current_ticks = cpu_self->Watchdog.ticks;
+    uint64_t interval_ticks = current_ticks - executing->last_cpu_start_timestamp;
+    CORE_cgroup_Control *cg = executing->cgroup;
+    _CORE_cgroup_Consume_cpu_quota( cg, interval_ticks );
+    cancel_cpu_suspend_watchdog( cg );
+  }
+#endif
+
   do {
     Thread_Control                     *heir;
     const Thread_CPU_budget_operations *cpu_budget_operations;
 
     level = _Thread_Preemption_intervention( executing, cpu_self, level );
     heir = _Thread_Get_heir_and_make_it_executing( cpu_self );
+
+#ifdef RTEMS_CGROUP
+    if ( heir->is_added_to_cgroup ) {
+      if ( heir->cgroup->cpu_quota_available == 0 ) {
+        _CORE_cgroup_Suspend(
+          heir->cgroup,
+          STATES_WAITING_FOR_CGROUP_CPU_QUOTA
+        );
+        continue;
+      }
+      heir->last_cpu_start_timestamp = cpu_self->Watchdog.ticks;
+      if ( !_Watchdog_Is_scheduled( &heir->cgroup->cpu_suspend_watchdog.watchdog ) ) {
+        set_cpu_suspend_watchdog( heir->cgroup );
+      }
+    }
+#endif
 
     /*
      * If the heir and executing are the same, then there is no need to do a

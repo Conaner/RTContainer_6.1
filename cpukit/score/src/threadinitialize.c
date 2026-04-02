@@ -326,6 +326,12 @@ static bool _Thread_Try_initialize(
 
   _Thread_Action_control_initialize( &the_thread->Post_switch_actions );
 
+#ifdef RTEMS_CGROUP
+  the_thread->cgroup = NULL;
+  the_thread->last_cpu_start_timestamp = 0;
+  the_thread->is_added_to_cgroup = false;
+#endif
+
   _Objects_Open_u32( &information->Objects, &the_thread->Object, config->name );
 
   /*

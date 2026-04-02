@@ -1,0 +1,16 @@
+SPDX-License-Identifier: CC-BY-SA-4.0 OR BSD-2-Clause
+actions:
+- get-boolean: null
+- env-enable: null
+build-type: option
+copyrights:
+- Copyright (C) 2026 lyc
+default:
+- enabled-by: true
+  value: false
+description: |
+  Build the cgroup test suite
+enabled-by: true
+links: []
+name: BUILD_CGTESTS
+type: build

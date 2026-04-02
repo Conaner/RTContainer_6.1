@@ -264,12 +264,22 @@ typedef struct {
     (sizeof(Heap_Protection_block_begin) + sizeof(Heap_Protection_block_end))
 #endif
 
+#ifdef RTEMS_CGROUP
+  struct CORE_cgroup_Control;
+
+  #define HEAP_CGROUP_HEADER_SIZE \
+    (sizeof(uintptr_t) + sizeof(struct CORE_cgroup_Control *))
+#else
+  #define HEAP_CGROUP_HEADER_SIZE 0
+#endif
+
 /**
- * @brief The block header consists of the two size fields
- * (@ref Heap_Block.prev_size and @ref Heap_Block.size_and_flag).
+ * @brief The block header consists of the heap administration fields used
+ * by all allocated blocks.
  */
 #define HEAP_BLOCK_HEADER_SIZE \
-  (2 * sizeof(uintptr_t) + HEAP_PROTECTION_HEADER_SIZE)
+  (2 * sizeof(uintptr_t) + HEAP_PROTECTION_HEADER_SIZE + \
+    HEAP_CGROUP_HEADER_SIZE)
 
 /**
  * @brief Description for free or used blocks.
@@ -311,6 +321,18 @@ struct Heap_Block {
 
   #ifdef HEAP_PROTECTION
     Heap_Protection_block_end Protection_end;
+  #endif
+
+  #ifdef RTEMS_CGROUP
+    /**
+     * @brief Original payload size requested for this allocation.
+     */
+    uintptr_t requested_size;
+
+    /**
+     * @brief Cgroup charged for this allocation or NULL if it was uncharged.
+     */
+    struct CORE_cgroup_Control *charged_cgroup;
   #endif
 
   /**

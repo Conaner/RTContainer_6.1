@@ -1,0 +1,28 @@
+*** BEGIN OF TEST CGTEST6-3 MEM CALC ***
+*** TEST VERSION: 6.0.0.ac63316696cb425f15633da01310bbe51f187dc6-modified
+*** TEST STATE: EXPECTED_PASS
+*** TEST BUILD: RTEMS_POSIX_API
+*** TEST TOOLS: 13.3.0 20240521 (RTEMS 6, RSB 3814cb0e7f86cca2be403eac831f9bf571984659, Newlib 1b3dcfd)
+Config: CG1 memory_limit=6291456 bytes
+Config: CG2 memory_limit=6291456 bytes
+Assign task 0 -> CG1
+Assign task 1 -> CG1
+Assign task 2 -> CG2
+Assign task 3 -> CG2
+Init waiting for 4 completion events
+[Task 3] started in CG2, quota=6291456
+[Task 3] CG2 1MB allocation succeeded
+[Task 2] started in CG2, quota=5242880
+[CG2] shared 2MB allocation succeeded
+>>> [CG2 Shrink Callback] Triggered! Need 4194304 bytes <<<
+[CG2 Shrink Callback] Freed shared 2MB buffer
+[Task 2] CG2 4MB allocation succeeded
+[Task 1] started in CG1, quota=6291456
+[Task 1] CG1 1MB allocation succeeded
+[Task 0] started in CG1, quota=5242880
+[CG1] shared 2MB allocation succeeded
+[Task 0] CG1 3MB allocation succeeded
+CGTEST6-3 completed: CG1 stayed within quota, CG2 required shrink and still completed
+
+*** END OF TEST CGTEST6-3 MEM CALC ***
+

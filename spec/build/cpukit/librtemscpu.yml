@@ -519,6 +519,8 @@ links:
 - role: build-dependency
   uid: objshell
 - role: build-dependency
+  uid: objcgroup
+- role: build-dependency
   uid: objsmp
 - role: build-dependency
   uid: objutf8

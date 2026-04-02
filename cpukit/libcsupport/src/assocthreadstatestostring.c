@@ -51,6 +51,11 @@ static const rtems_assoc_32_pair state_pairs[] = {
   { STATES_SUSPENDED,                      "SUSP" },
   { STATES_WAITING_FOR_SEGMENT,            "SEG" },
   { STATES_LIFE_IS_CHANGING,               "LIFE" },
+#ifdef RTEMS_CGROUP
+  { STATES_WAITING_FOR_CGROUP_CPU_QUOTA,   "CG_CPU" },
+  { STATES_WAITING_FOR_CGROUP_MEMORY,      "CG_MEM" },
+  { STATES_WAITING_FOR_CGROUP_BLKIO,       "CG_BLK" },
+#endif
   { STATES_DEBUGGER,                       "DBG" },
   { STATES_INTERRUPTIBLE_BY_SIGNAL,        "IS" },
   { STATES_WAITING_FOR_RPC_REPLY,          "RPC" },

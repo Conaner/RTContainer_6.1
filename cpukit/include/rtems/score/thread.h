@@ -46,6 +46,9 @@
 #if defined(RTEMS_MULTIPROCESSING)
 #include <rtems/score/mppkt.h>
 #endif
+#ifdef RTEMS_CGROUP
+#include <rtems/score/corecgroup.h>
+#endif
 #include <rtems/score/freechain.h>
 #include <rtems/score/isrlock.h>
 #include <rtems/score/objectdata.h>
@@ -1000,6 +1003,17 @@ struct _Thread_Control {
    * @brief LIFO list of user extensions iterators.
    */
   struct User_extensions_Iterator *last_user_extensions_iterator;
+
+#ifdef RTEMS_CGROUP
+  /** @brief Pointer to the cgroup this thread belongs to, or NULL. */
+  CORE_cgroup_Control *cgroup;
+
+  /** @brief Tick timestamp when this thread last started executing. */
+  uint64_t last_cpu_start_timestamp;
+
+  /** @brief True if this thread has been added to a cgroup. */
+  bool is_added_to_cgroup;
+#endif
 
   /**
    * @brief Variable length array of user extension pointers.

@@ -73,6 +73,10 @@ links:
 - role: build-dependency
   uid: validation/grp
 - role: build-dependency
+  uid: optcgtests
+- role: build-dependency
+  uid: cgtests/grp
+- role: build-dependency
   uid: testopts
 type: build
 use-after:

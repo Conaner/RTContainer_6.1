@@ -1,0 +1,17 @@
+*** BEGIN OF TEST CGTEST6-2 MEM CALC ***
+*** TEST VERSION: 6.0.0.ac63316696cb425f15633da01310bbe51f187dc6-modified
+*** TEST STATE: EXPECTED_PASS
+*** TEST BUILD: RTEMS_POSIX_API
+*** TEST TOOLS: 13.3.0 20240521 (RTEMS 6, RSB 3814cb0e7f86cca2be403eac831f9bf571984659, Newlib 1b3dcfd)
+Config: 1 cgroup, 3 tasks, memory_limit=8388608 bytes
+Init waiting for 3 completion events
+Worker task 2 started, quota=8388608
+Task 2 1MB allocation succeeded
+Worker task 1 started, quota=7340032
+Task 1 2MB allocation succeeded
+Worker task 0 started, quota=5242880
+Shared 2MB allocation succeeded
+Task 0 3MB allocation succeeded
+All allocations finished without shrink in CGTEST6-2
+
+*** END OF TEST CGTEST6-2 MEM CALC ***

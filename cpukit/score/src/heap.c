@@ -152,6 +152,10 @@
     block->Protection_begin.next_delayed_free_block = NULL;
     block->Protection_begin.task = _Thread_Get_executing();
     block->Protection_begin.tag = NULL;
+#ifdef RTEMS_CGROUP
+    block->requested_size = 0;
+    block->charged_cgroup = NULL;
+#endif
     block->Protection_end.protector [0] = HEAP_END_PROTECTOR_0;
     block->Protection_end.protector [1] = HEAP_END_PROTECTOR_1;
   }

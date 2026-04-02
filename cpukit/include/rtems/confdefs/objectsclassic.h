@@ -80,6 +80,10 @@
   #include <rtems/rtems/timerdata.h>
 #endif
 
+#if CONFIGURE_MAXIMUM_CGROUPS > 0
+  #include <rtems/rtems/cgroupdata.h>
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -117,6 +121,10 @@ extern "C" {
 
 #if CONFIGURE_MAXIMUM_TIMERS > 0
   TIMER_INFORMATION_DEFINE( CONFIGURE_MAXIMUM_TIMERS );
+#endif
+
+#if CONFIGURE_MAXIMUM_CGROUPS > 0
+  CGROUP_INFORMATION_DEFINE( CONFIGURE_MAXIMUM_CGROUPS );
 #endif
 
 #ifdef __cplusplus

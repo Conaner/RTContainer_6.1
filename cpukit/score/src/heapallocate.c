@@ -42,6 +42,10 @@
 #endif
 
 #include <rtems/score/heapimpl.h>
+#ifdef RTEMS_CGROUP
+#include <rtems/score/threadimpl.h>
+#include <rtems/score/corecgroup.h>
+#endif
 
 #ifndef HEAP_PROTECTION
   #define _Heap_Protection_free_delayed_blocks( heap, alloc_begin ) false
@@ -306,6 +310,38 @@ void *_Heap_Allocate_aligned_with_boundary(
     ++stats->allocs;
     stats->searches += search_count;
     stats->lifetime_allocated += _Heap_Block_size( block );
+
+#ifdef RTEMS_CGROUP
+    {
+      uintptr_t charge_size = alloc_size;
+      const Thread_Control *executing = _Thread_Get_executing();
+
+      block->requested_size = charge_size;
+      block->charged_cgroup = NULL;
+
+      if ( executing != NULL && executing->is_added_to_cgroup ) {
+        CORE_cgroup_Control *cgroup = executing->cgroup;
+
+        block->charged_cgroup = cgroup;
+
+        if ( charge_size > cgroup->mem_quota_available ) {
+          if ( cgroup->shrink_callback != NULL ) {
+            cgroup->shrink_callback( cgroup->shrink_arg, charge_size );
+          }
+
+          if ( charge_size > cgroup->mem_quota_available ) {
+            cgroup->should_charge_next_free = false;
+            _Heap_Free( heap, (void *) alloc_begin );
+            alloc_begin = 0;
+          } else {
+            cgroup->mem_quota_available -= charge_size;
+          }
+        } else {
+          cgroup->mem_quota_available -= charge_size;
+        }
+      }
+    }
+#endif
   } else {
     /* Statistics */
     ++stats->failed_allocs;
