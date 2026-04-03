@@ -58,13 +58,21 @@ static void log_task_quota_state_change( uint32_t task_index, bool waiting )
 {
   uint32_t group_index = Task_to_group[ task_index ];
 
-  printf(
-    "[Ticks:%" PRIu64 "] Task %" PRIu32 " %s cgroup CPU quota throttling in CG%" PRIu32 "\n",
-    current_ticks(),
-    task_index,
-    waiting ? "entered" : "left",
-    group_index + 1
-  );
+  if ( waiting ) {
+    printf(
+      "\033[36m[Ticks:%" PRIu64 "] Task %" PRIu32 " entered cgroup CPU quota throttling in CG%" PRIu32 "\033[0m\n",
+      current_ticks(),
+      task_index,
+      group_index + 1
+    );
+  } else {
+    printf(
+      "\033[32m[Ticks:%" PRIu64 "] Task %" PRIu32 " left cgroup CPU quota throttling in CG%" PRIu32 "\033[0m\n",
+      current_ticks(),
+      task_index,
+      group_index + 1
+    );
+  }
 }
 
 static rtems_task monitor_task( rtems_task_argument ignored )
@@ -137,7 +145,7 @@ static rtems_task task_entry( rtems_task_argument arg )
   cpu_quota_available = core_cg->cpu_quota_available;
 
   printf(
-    "[Ticks:%" PRIu64 "] Task %" PRIu32 " finished in CG%" PRIu32 ", cgroup quota available=%" PRIu64 " ticks\n",
+    "\033[33m[Ticks:%" PRIu64 "] Task %" PRIu32 " finished in CG%" PRIu32 ", cgroup quota available=%" PRIu64 " ticks\033[0m\n",
     current_ticks(),
     task_index,
     group_index + 1,
@@ -194,7 +202,7 @@ rtems_task Init( rtems_task_argument ignored )
     rtems_test_assert( status == RTEMS_SUCCESSFUL );
 
     printf(
-      "[Ticks:%" PRIu64 "] Config: CG%" PRIu32 " quota=%" PRIu64 " ticks, period=%" PRIu64 " ticks\n",
+      "\033[34m[Ticks:%" PRIu64 "] Config: CG%" PRIu32 " quota=%" PRIu64 " ticks, period=%" PRIu64 " ticks\033[0m\n",
       current_ticks(),
       i + 1,
       configs[ i ].cpu_quota,

@@ -34,11 +34,19 @@ links:
 - role: build-dependency
   uid: cgtest5_3
 - role: build-dependency
+  uid: cgtest5_4
+- role: build-dependency
+  uid: cgtest5_5
+- role: build-dependency
   uid: cgtest6
 - role: build-dependency
   uid: cgtest6_2
 - role: build-dependency
   uid: cgtest6_3
+- role: build-dependency
+  uid: cgtest6_4
+- role: build-dependency
+  uid: cgtest6_5
 - role: build-dependency
   uid: orgtest1
 - role: build-dependency

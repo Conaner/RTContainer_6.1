@@ -50,7 +50,7 @@ static void unexpected_shrinker( void *arg, uintptr_t target )
 {
   (void) arg;
   Shrink_called = true;
-  printf( "Unexpected shrink callback triggered, need %lu bytes\n", (unsigned long) target );
+  printf( "\033[31mUnexpected shrink callback triggered, need %lu bytes\033[0m\n", (unsigned long) target );
 }
 
 static rtems_task worker_task( rtems_task_argument arg )
@@ -67,19 +67,27 @@ static rtems_task worker_task( rtems_task_argument arg )
     Shared_buffer = malloc( SHARED_BUFFER_SIZE );
     Shared_buffer_allocated = Shared_buffer != NULL;
     printf(
-      "Shared 2MB allocation %s\n",
-      Shared_buffer != NULL ? "succeeded" : "failed"
+      Shared_buffer != NULL
+        ? "\033[32mShared 2MB allocation succeeded\033[0m\n"
+        : "\033[31mShared 2MB allocation failed\033[0m\n"
     );
     rtems_test_assert( Shared_buffer != NULL );
   }
 
   Task_buffer[task_index] = malloc( Task_alloc_size[task_index] );
-  printf(
-    "Task %lu %zuMB allocation %s\n",
-    arg,
-    Task_alloc_size[task_index] >> 20,
-    Task_buffer[task_index] != NULL ? "succeeded" : "failed"
-  );
+  if ( Task_buffer[task_index] != NULL ) {
+    printf(
+      "\033[32mTask %lu %zuMB allocation succeeded\033[0m\n",
+      arg,
+      Task_alloc_size[task_index] >> 20
+    );
+  } else {
+    printf(
+      "\033[31mTask %lu %zuMB allocation failed\033[0m\n",
+      arg,
+      Task_alloc_size[task_index] >> 20
+    );
+  }
   rtems_test_assert( Task_buffer[task_index] != NULL );
 
   rtems_event_send( Init_task_id, RTEMS_EVENT_0 << task_index );

@@ -53,12 +53,19 @@ static rtems_event_set completion_mask( void )
 
 static void log_task_quota_state_change( uint32_t task_index, bool waiting )
 {
-  printf(
-    "[Ticks:%" PRIu64 "] Task %" PRIu32 " %s cgroup CPU quota throttling\n",
-    current_ticks(),
-    task_index,
-    waiting ? "entered" : "left"
-  );
+  if ( waiting ) {
+    printf(
+      "\033[36m[Ticks:%" PRIu64 "] Task %" PRIu32 " entered cgroup CPU quota throttling\033[0m\n",
+      current_ticks(),
+      task_index
+    );
+  } else {
+    printf(
+      "\033[32m[Ticks:%" PRIu64 "] Task %" PRIu32 " left cgroup CPU quota throttling\033[0m\n",
+      current_ticks(),
+      task_index
+    );
+  }
 }
 
 static rtems_task monitor_task( rtems_task_argument ignored )
@@ -125,7 +132,7 @@ static rtems_task task_entry( rtems_task_argument arg )
   cpu_quota_available = core_cg->cpu_quota_available;
 
   printf(
-    "[Ticks:%" PRIu64 "] Task %" PRIu32 " finished, cgroup quota available=%" PRIu64 " ticks\n",
+    "\033[33m[Ticks:%" PRIu64 "] Task %" PRIu32 " finished, cgroup quota available=%" PRIu64 " ticks\033[0m\n",
     current_ticks(),
     task_index,
     cpu_quota_available

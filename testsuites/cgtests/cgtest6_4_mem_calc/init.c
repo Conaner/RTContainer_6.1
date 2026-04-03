@@ -18,33 +18,45 @@
 #include <rtems/rtems/event.h>
 #include <rtems/rtems/tasks.h>
 
-const char rtems_test_name[] = "CGTEST6-3 MEM CALC";
+const char rtems_test_name[] = "CGTEST6-4 MEM CALC";
 
-#define TEST_TASK_COUNT 4
-#define TEST_CGROUP_COUNT 2
+#define TEST_TASK_COUNT   6
+#define TEST_CGROUP_COUNT 3
 #define SHARED_BUFFER_SIZE ( 2 * 1024 * 1024 )
 
+/*
+ * Three cgroup scenario:
+ *   CG1 (limit=6MB): task 0 alloc 2MB shared + 2MB own = 4MB,
+ *                    task 1 alloc 1MB -> total 5MB < 6MB -> NO shrink
+ *   CG2 (limit=5MB): task 2 alloc 2MB shared + 2MB own = 4MB,
+ *                    task 3 alloc 2MB -> 6MB > 5MB -> shrink frees 2MB -> 4MB -> OK
+ *   CG3 (limit=8MB): task 4 alloc 2MB shared + 3MB own = 5MB,
+ *                    task 5 alloc 2MB -> total 7MB < 8MB -> NO shrink
+ */
 typedef struct {
   const char *name;
-  rtems_id id;
-  void *shared_buffer;
-  bool shared_allocated;
-  bool shrink_called;
+  rtems_id    id;
+  void       *shared_buffer;
+  bool        shared_allocated;
+  bool        shrink_called;
 } Memcg_Test_Context;
 
 static rtems_id Init_task_id;
 static Memcg_Test_Context Groups[ TEST_CGROUP_COUNT ] = {
   { .name = "CG1" },
-  { .name = "CG2" }
+  { .name = "CG2" },
+  { .name = "CG3" }
 };
 static void *Task_buffer[ TEST_TASK_COUNT ];
-static const uint32_t Task_to_group[ TEST_TASK_COUNT ] = { 0, 0, 1, 1 };
-static const uint32_t Shared_owner_task[ TEST_CGROUP_COUNT ] = { 0, 2 };
-static const size_t Task_alloc_size[ TEST_TASK_COUNT ] = {
-  3 * 1024 * 1024,
-  1 * 1024 * 1024,
-  4 * 1024 * 1024,
-  1 * 1024 * 1024
+static const uint32_t Task_to_group[ TEST_TASK_COUNT ]       = { 0, 0, 1, 1, 2, 2 };
+static const uint32_t Shared_owner_task[ TEST_CGROUP_COUNT ] = { 0, 2, 4 };
+static const size_t   Task_alloc_size[ TEST_TASK_COUNT ] = {
+  2 * 1024 * 1024,   /* task 0: CG1 own (+ 2MB shared) */
+  1 * 1024 * 1024,   /* task 1: CG1 own                */
+  2 * 1024 * 1024,   /* task 2: CG2 own (+ 2MB shared) */
+  2 * 1024 * 1024,   /* task 3: CG2 own -> triggers shrink */
+  3 * 1024 * 1024,   /* task 4: CG3 own (+ 2MB shared) */
+  2 * 1024 * 1024    /* task 5: CG3 own                */
 };
 
 static rtems_event_set completion_mask( void )
@@ -103,23 +115,23 @@ static rtems_task worker_task( rtems_task_argument arg )
     rtems_test_assert( ctx->shared_buffer != NULL );
   }
 
-  Task_buffer[task_index] = malloc( Task_alloc_size[task_index] );
-  if ( Task_buffer[task_index] != NULL ) {
+  Task_buffer[ task_index ] = malloc( Task_alloc_size[ task_index ] );
+  if ( Task_buffer[ task_index ] != NULL ) {
     printf(
       "\033[32m[Task %lu] %s %zuMB allocation succeeded\033[0m\n",
       arg,
       ctx->name,
-      Task_alloc_size[task_index] >> 20
+      Task_alloc_size[ task_index ] >> 20
     );
   } else {
     printf(
       "\033[31m[Task %lu] %s %zuMB allocation failed\033[0m\n",
       arg,
       ctx->name,
-      Task_alloc_size[task_index] >> 20
+      Task_alloc_size[ task_index ] >> 20
     );
   }
-  rtems_test_assert( Task_buffer[task_index] != NULL );
+  rtems_test_assert( Task_buffer[ task_index ] != NULL );
 
   rtems_event_send( Init_task_id, RTEMS_EVENT_0 << task_index );
   rtems_task_exit();
@@ -135,17 +147,24 @@ rtems_task Init( rtems_task_argument ignored )
   CORE_cgroup_config configs[ TEST_CGROUP_COUNT ] = {
     {
       .cpu_shares = 1,
-      .cpu_quota = _Watchdog_Ticks_per_second * 60,
+      .cpu_quota  = _Watchdog_Ticks_per_second * 60,
       .cpu_period = _Watchdog_Ticks_per_second * 60,
       .memory_limit = 6 * 1024 * 1024,
-      .blkio_limit = 0
+      .blkio_limit  = 0
     },
     {
       .cpu_shares = 1,
-      .cpu_quota = _Watchdog_Ticks_per_second * 60,
+      .cpu_quota  = _Watchdog_Ticks_per_second * 60,
       .cpu_period = _Watchdog_Ticks_per_second * 60,
-      .memory_limit = 6 * 1024 * 1024,
-      .blkio_limit = 0
+      .memory_limit = 5 * 1024 * 1024,
+      .blkio_limit  = 0
+    },
+    {
+      .cpu_shares = 1,
+      .cpu_quota  = _Watchdog_Ticks_per_second * 60,
+      .cpu_period = _Watchdog_Ticks_per_second * 60,
+      .memory_limit = 8 * 1024 * 1024,
+      .blkio_limit  = 0
     }
   };
   rtems_status_code status;
@@ -153,41 +172,41 @@ rtems_task Init( rtems_task_argument ignored )
   for ( uint32_t i = 0; i < TEST_CGROUP_COUNT; ++i ) {
     status = rtems_cgroup_create(
       rtems_build_name( 'C', 'G', '1' + i, ' ' ),
-      &Groups[i].id,
-      &configs[i]
+      &Groups[ i ].id,
+      &configs[ i ]
     );
     rtems_test_assert( status == RTEMS_SUCCESSFUL );
-    printf( "Config: %s memory_limit=%" PRIu64 " bytes\n", Groups[i].name, configs[i].memory_limit );
+    printf( "Config: %s memory_limit=%" PRIu64 " bytes\n", Groups[ i ].name, configs[ i ].memory_limit );
 
     ISR_lock_Context lock_context;
-    Cgroup_Control *the_cgroup = _Cgroup_Get( Groups[i].id, &lock_context );
+    Cgroup_Control *the_cgroup = _Cgroup_Get( Groups[ i ].id, &lock_context );
     rtems_test_assert( the_cgroup != NULL );
     the_cgroup->cgroup.shrink_callback = group_shrinker;
-    the_cgroup->cgroup.shrink_arg = &Groups[i];
+    the_cgroup->cgroup.shrink_arg = &Groups[ i ];
     _ISR_lock_ISR_enable( &lock_context );
   }
 
   Init_task_id = rtems_task_self();
 
   for ( uint32_t i = 0; i < TEST_TASK_COUNT; ++i ) {
-    uint32_t group_index = Task_to_group[i];
+    uint32_t group_index = Task_to_group[ i ];
 
     status = rtems_task_create(
-      rtems_build_name( '6', '3', 'T', '0' + i ),
+      rtems_build_name( '6', '4', 'T', '0' + i ),
       9 - i,
       RTEMS_MINIMUM_STACK_SIZE,
       RTEMS_DEFAULT_MODES,
       RTEMS_DEFAULT_ATTRIBUTES,
-      &Task_id[i]
+      &Task_id[ i ]
     );
     rtems_test_assert( status == RTEMS_SUCCESSFUL );
 
-    status = rtems_cgroup_add_task( Groups[group_index].id, Task_id[i] );
+    status = rtems_cgroup_add_task( Groups[ group_index ].id, Task_id[ i ] );
     rtems_test_assert( status == RTEMS_SUCCESSFUL );
 
-    printf( "Assign task %lu -> %s\n", (unsigned long) i, Groups[group_index].name );
+    printf( "Assign task %lu -> %s\n", (unsigned long) i, Groups[ group_index ].name );
 
-    status = rtems_task_start( Task_id[i], worker_task, i );
+    status = rtems_task_start( Task_id[ i ], worker_task, i );
     rtems_test_assert( status == RTEMS_SUCCESSFUL );
   }
 
@@ -200,10 +219,13 @@ rtems_task Init( rtems_task_argument ignored )
     &received
   );
   rtems_test_assert( status == RTEMS_SUCCESSFUL );
-  rtems_test_assert( !Groups[0].shrink_called );
-  rtems_test_assert( Groups[1].shrink_called );
+  rtems_test_assert( !Groups[ 0 ].shrink_called );
+  rtems_test_assert(  Groups[ 1 ].shrink_called );
+  rtems_test_assert( !Groups[ 2 ].shrink_called );
 
-  printf( "CGTEST6-3 completed: CG1 stayed within quota, CG2 required shrink and still completed\n" );
+  printf(
+    "CGTEST6-4 completed: CG1 and CG3 stayed within quota, CG2 required shrink and still completed\n"
+  );
 
   TEST_END();
   rtems_test_exit( 0 );

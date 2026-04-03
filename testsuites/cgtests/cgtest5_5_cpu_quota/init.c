@@ -18,17 +18,33 @@
 #include <rtems/rtems/support.h>
 #include <rtems/rtems/tasks.h>
 
-const char rtems_test_name[] = "CGTEST5-2 CPU QUOTA";
+const char rtems_test_name[] = "CGTEST5-5 CPU QUOTA";
 
-#define TEST_TASK_COUNT 4
-#define MONITOR_EVENT RTEMS_EVENT_4
+#define TEST_TASK_COUNT   5
+#define TEST_CGROUP_COUNT 2
+#define MONITOR_EVENT     RTEMS_EVENT_5
 
 static rtems_id Init_task_id;
 static rtems_id Monitor_task_id;
-static rtems_id Cgroup_id;
+static rtems_id Cgroup_id[ TEST_CGROUP_COUNT ];
 static Per_CPU_Control *test_cpu;
 static bool Task_completed[ TEST_TASK_COUNT ];
 static bool Task_waiting_for_quota[ TEST_TASK_COUNT ];
+
+/*
+ * Asymmetric distribution: 3 tasks in CG1, 2 tasks in CG2
+ *   Tasks 0,1,2 -> CG1 (tight quota: 1s / 5s = 20%)
+ *   Tasks 3,4   -> CG2 (generous quota: 2s / 3s = 67%)
+ *
+ * Per-task CPU busy time (in seconds):
+ *   Task 0 (CG1): 1s
+ *   Task 1 (CG1): 2s
+ *   Task 2 (CG1): 3s
+ *   Task 3 (CG2): 2s
+ *   Task 4 (CG2): 3s
+ */
+static const uint32_t Task_to_group[ TEST_TASK_COUNT ]    = { 0, 0, 0, 1, 1 };
+static const uint32_t Task_cpu_multiplier[ TEST_TASK_COUNT ] = { 1, 2, 3, 2, 3 };
 
 static uint64_t current_ticks( void )
 {
@@ -48,22 +64,26 @@ static void busy_cpu_for_ticks( uint64_t ticks )
 static rtems_event_set completion_mask( void )
 {
   return RTEMS_EVENT_0 | RTEMS_EVENT_1 | RTEMS_EVENT_2 |
-         RTEMS_EVENT_3 | MONITOR_EVENT;
+         RTEMS_EVENT_3 | RTEMS_EVENT_4 | MONITOR_EVENT;
 }
 
 static void log_task_quota_state_change( uint32_t task_index, bool waiting )
 {
+  uint32_t group_index = Task_to_group[ task_index ];
+
   if ( waiting ) {
     printf(
-      "\033[36m[Ticks:%" PRIu64 "] Task %" PRIu32 " entered cgroup CPU quota throttling in CG1\033[0m\n",
+      "\033[36m[Ticks:%" PRIu64 "] Task %" PRIu32 " entered cgroup CPU quota throttling in CG%" PRIu32 "\033[0m\n",
       current_ticks(),
-      task_index
+      task_index,
+      group_index + 1
     );
   } else {
     printf(
-      "\033[32m[Ticks:%" PRIu64 "] Task %" PRIu32 " left cgroup CPU quota throttling in CG1\033[0m\n",
+      "\033[32m[Ticks:%" PRIu64 "] Task %" PRIu32 " left cgroup CPU quota throttling in CG%" PRIu32 "\033[0m\n",
       current_ticks(),
-      task_index
+      task_index,
+      group_index + 1
     );
   }
 }
@@ -116,25 +136,32 @@ static rtems_task monitor_task( rtems_task_argument ignored )
 static rtems_task task_entry( rtems_task_argument arg )
 {
   uint32_t task_index = (uint32_t) arg;
+  uint32_t group_index = Task_to_group[ task_index ];
   ISR_lock_Context lock_context;
   Cgroup_Control *cgroup;
   CORE_cgroup_Control *core_cg;
   uint64_t cpu_quota_available;
 
-  printf( "[Ticks:%" PRIu64 "] Task %" PRIu32 " started in CG1\n", current_ticks(), task_index );
+  printf(
+    "[Ticks:%" PRIu64 "] Task %" PRIu32 " started in CG%" PRIu32 "\n",
+    current_ticks(),
+    task_index,
+    group_index + 1
+  );
 
-  busy_cpu_for_ticks( ( task_index + 1 ) * _Watchdog_Ticks_per_second );
+  busy_cpu_for_ticks( Task_cpu_multiplier[ task_index ] * _Watchdog_Ticks_per_second );
 
-  cgroup = _Cgroup_Get( Cgroup_id, &lock_context );
+  cgroup = _Cgroup_Get( Cgroup_id[ group_index ], &lock_context );
   rtems_test_assert( cgroup != NULL );
   _ISR_lock_ISR_enable( &lock_context );
   core_cg = &cgroup->cgroup;
   cpu_quota_available = core_cg->cpu_quota_available;
 
   printf(
-    "\033[33m[Ticks:%" PRIu64 "] Task %" PRIu32 " finished in CG1, cgroup quota available=%" PRIu64 " ticks\033[0m\n",
+    "\033[33m[Ticks:%" PRIu64 "] Task %" PRIu32 " finished in CG%" PRIu32 ", cgroup quota available=%" PRIu64 " ticks\033[0m\n",
     current_ticks(),
     task_index,
+    group_index + 1,
     cpu_quota_available
   );
 
@@ -153,40 +180,58 @@ rtems_task Init( rtems_task_argument ignored )
   test_cpu = _Per_CPU_Get_by_index( 0 );
 
   uint32_t ticks_per_second = _Watchdog_Ticks_per_second;
-  CORE_cgroup_config config = {
-    .cpu_shares = 0,
-    .cpu_quota = ticks_per_second,
-    .cpu_period = ticks_per_second * 3,
-    .memory_limit = 0,
-    .blkio_limit = 0
+
+  /*
+   * Two cgroups with different quota/period ratios:
+   *   CG1: quota=1s / period=5s (20% utilization, tight) - 3 tasks
+   *   CG2: quota=2s / period=3s (67% utilization)        - 2 tasks
+   */
+  CORE_cgroup_config configs[ TEST_CGROUP_COUNT ] = {
+    {
+      .cpu_shares = 0,
+      .cpu_quota  = ticks_per_second,
+      .cpu_period = ticks_per_second * 5,
+      .memory_limit = 0,
+      .blkio_limit  = 0
+    },
+    {
+      .cpu_shares = 0,
+      .cpu_quota  = ticks_per_second * 2,
+      .cpu_period = ticks_per_second * 3,
+      .memory_limit = 0,
+      .blkio_limit  = 0
+    }
   };
   rtems_status_code status;
   rtems_event_set received;
 
-  status = rtems_cgroup_create(
-    rtems_build_name( 'C', 'G', '1', ' ' ),
-    &Cgroup_id,
-    &config
-  );
-  rtems_test_assert( status == RTEMS_SUCCESSFUL );
+  for ( uint32_t i = 0; i < TEST_CGROUP_COUNT; ++i ) {
+    status = rtems_cgroup_create(
+      rtems_build_name( 'C', 'G', '1' + i, ' ' ),
+      &Cgroup_id[ i ],
+      &configs[ i ]
+    );
+    rtems_test_assert( status == RTEMS_SUCCESSFUL );
 
-  printf(
-    "\033[34m[Ticks:%" PRIu64 "] Config: 1 cgroup, %d tasks, quota=%" PRIu64 " ticks, period=%" PRIu64 " ticks\033[0m\n",
-    current_ticks(),
-    TEST_TASK_COUNT,
-    config.cpu_quota,
-    config.cpu_period
-  );
+    printf(
+      "\033[34m[Ticks:%" PRIu64 "] Config: CG%" PRIu32 " quota=%" PRIu64 " ticks, period=%" PRIu64 " ticks\033[0m\n",
+      current_ticks(),
+      i + 1,
+      configs[ i ].cpu_quota,
+      configs[ i ].cpu_period
+    );
+  }
 
   Init_task_id = rtems_task_self();
 
   for ( uint32_t i = 0; i < TEST_TASK_COUNT; ++i ) {
+    uint32_t group_index = Task_to_group[ i ];
     ISR_lock_Context lock_context;
     Cgroup_Control *cgroup;
     CORE_cgroup_Control *core_cg;
 
     status = rtems_task_create(
-      rtems_build_name( '5', '2', 'T', '0' + i ),
+      rtems_build_name( '5', '5', 'T', '0' + i ),
       20 - i,
       RTEMS_MINIMUM_STACK_SIZE,
       RTEMS_DEFAULT_MODES,
@@ -195,17 +240,19 @@ rtems_task Init( rtems_task_argument ignored )
     );
     rtems_test_assert( status == RTEMS_SUCCESSFUL );
 
-    status = rtems_cgroup_add_task( Cgroup_id, Task_id[ i ] );
+    status = rtems_cgroup_add_task( Cgroup_id[ group_index ], Task_id[ i ] );
     rtems_test_assert( status == RTEMS_SUCCESSFUL );
 
-    cgroup = _Cgroup_Get( Cgroup_id, &lock_context );
+    cgroup = _Cgroup_Get( Cgroup_id[ group_index ], &lock_context );
     rtems_test_assert( cgroup != NULL );
     _ISR_lock_ISR_enable( &lock_context );
     core_cg = &cgroup->cgroup;
     printf(
-      "[Ticks:%" PRIu64 "] Task %" PRIu32 " assigned to CG1, quota available=%" PRIu64 " ticks\n",
+      "[Ticks:%" PRIu64 "] Assign task %" PRIu32 " -> CG%" PRIu32 " (busy=%" PRIu32 "s), quota available=%" PRIu64 " ticks\n",
       current_ticks(),
       i,
+      group_index + 1,
+      Task_cpu_multiplier[ i ],
       core_cg->cpu_quota_available
     );
 
@@ -214,7 +261,7 @@ rtems_task Init( rtems_task_argument ignored )
   }
 
   status = rtems_task_create(
-    rtems_build_name( 'M', 'O', 'N', '2' ),
+    rtems_build_name( 'M', 'O', 'N', '5' ),
     8,
     RTEMS_MINIMUM_STACK_SIZE,
     RTEMS_DEFAULT_MODES,
@@ -235,7 +282,12 @@ rtems_task Init( rtems_task_argument ignored )
   );
   rtems_test_assert( status == RTEMS_SUCCESSFUL );
 
-  printf( "[Ticks:%" PRIu64 "] All %d tasks finished in CGTEST5-2\n", current_ticks(), TEST_TASK_COUNT );
+  printf(
+    "[Ticks:%" PRIu64 "] All %d tasks finished across %d cgroups in CGTEST5-5\n",
+    current_ticks(),
+    TEST_TASK_COUNT,
+    TEST_CGROUP_COUNT
+  );
 
   TEST_END();
   rtems_test_exit( 0 );
