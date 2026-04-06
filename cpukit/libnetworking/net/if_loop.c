@@ -130,7 +130,7 @@ rtems_bsdnet_initialize_loop(void)
 
 #ifdef RTEMSCFG_NET_CONTAINER
 // 为容器创建独立的 loopback 接口
-void
+int
 rtems_bsdnet_initialize_loop_for_container(void *net_group_ptr)
 {
 	net_group *group = (net_group *)net_group_ptr;
@@ -139,10 +139,10 @@ rtems_bsdnet_initialize_loop_for_container(void *net_group_ptr)
 	int s;
 	
 	// 动态分配 loopback 接口
-	ifp = (struct ifnet *)malloc(sizeof(struct ifnet), M_IFADDR, M_NOWAIT);
+	ifp = (struct ifnet *)malloc(sizeof(struct ifnet), M_IFADDR, M_WAITOK);
 	if (ifp == NULL) {
 		printf("Failed to allocate loopback interface for container\n");
-		return;
+		return -1;
 	}
 	
 	memset(ifp, 0, sizeof(struct ifnet));
@@ -163,10 +163,10 @@ rtems_bsdnet_initialize_loop_for_container(void *net_group_ptr)
 
 	
 	// 分配 in_ifaddr 结构
-	ia = (struct in_ifaddr *)malloc(sizeof(struct in_ifaddr), M_IFADDR, M_NOWAIT);
+	ia = (struct in_ifaddr *)malloc(sizeof(struct in_ifaddr), M_IFADDR, M_WAITOK);
 	if (ia == NULL) {
 		printf("Failed to allocate in_ifaddr for container loopback\n");
-		return;
+		return -2;
 	}
 	
 	memset(ia, 0, sizeof(struct in_ifaddr));
@@ -226,6 +226,7 @@ rtems_bsdnet_initialize_loop_for_container(void *net_group_ptr)
 #if NBPFILTER > 0
 	bpfattach(ifp, DLT_NULL, sizeof(u_int));
 #endif
+	return 0;
 }
 #endif
 

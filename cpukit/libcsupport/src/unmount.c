@@ -129,10 +129,6 @@ int unmount( const char *path )
             rtems_chain_extract_unprotected(&mt_entry->mt_node);
             mt_entry->unmount_task = self_task_id;
             mt_entry->mounted = false;
-            
-            rtems_filesystem_global_location_t *null_loc = 
-              rtems_filesystem_global_location_obtain_null();
-            rtems_filesystem_global_location_assign(&mt_entry->mt_fs_root, null_loc);
             rtems_filesystem_mt_entry_unlock( lock_context );
           }
         } else {

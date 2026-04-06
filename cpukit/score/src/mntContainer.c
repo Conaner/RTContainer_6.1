@@ -133,7 +133,7 @@ MntContainer *rtems_mnt_container_create(void)
     if (!mntContainer)
         return NULL;
 
-    mntContainer->rc = 0;
+    mntContainer->rc = 1;
     mntContainer->ID = ++g_mntContainerId;
     rtems_chain_initialize_empty(&mntContainer->mountList);
 
@@ -185,15 +185,13 @@ static void cleanup_container_mounts(MntContainer *mntContainer)
             mt_entry->mt_fs_root = NULL;
         }
         
-        if (mt_entry->target) {
-            free((void *)mt_entry->target);
-            mt_entry->target = NULL;
-        }
-        if (mt_entry->type) {
-            free((void *)mt_entry->type);
-            mt_entry->type = NULL;
-        }
-        
+        /*
+         * target/type may point into the same allocation as mt_entry
+         * (see alloc_mount_table_entry()), so freeing them separately can
+         * trigger INVALID_HEAP_FREE. Release the mount entry as one object.
+         */
+        mt_entry->target = NULL;
+        mt_entry->type = NULL;
         free(mt_entry);
     }
 }
@@ -222,7 +220,6 @@ void rtems_mnt_container_delete(MntContainer *mntContainer)
     cleanup_container_mounts(mntContainer);
 
     rtems_mnt_container_remove_from_list(mntContainer);
-    
     free(mntContainer);
 }
 
@@ -453,12 +450,6 @@ rtems_filesystem_global_location_t *get_container_root_location(void)
             {
                 return &rtems_filesystem_global_location_null;
             }
-            
-            if (strncmp(current_eval_path, "/mnt", 4) == 0 &&
-                (current_eval_path[4] == '/' || current_eval_path[4] == '\0'))
-            {
-                return &rtems_filesystem_global_location_null;
-            }
         }
 
         rtems_chain_node *node;
@@ -479,7 +470,7 @@ rtems_filesystem_global_location_t *get_container_root_location(void)
                 return fs_root;
             }
         }
-        
+
         return &rtems_filesystem_global_location_null;
     }
     
@@ -502,14 +493,16 @@ rtems_filesystem_global_location_t *get_container_current_location(void)
     {
         rtems_filesystem_global_location_t *current_dir = 
             executing->user_environment->current_directory;
-        if (current_dir)
+        if (current_dir != NULL &&
+            !rtems_filesystem_global_location_is_null(current_dir) &&
+            current_dir->location.mt_entry != NULL)
         {
             ++current_dir->reference_count;
             return current_dir;
         }
     }
     
-    // 如果没有设置当前目录,返回容器的根目录作为默认值
+    // 如果没有设置当前目录,回退到容器根目录作为默认当前目录
     return get_container_root_location();
 #endif
     

@@ -91,7 +91,5 @@ links:
   uid: optpidcontainer
 - role: build-dependency
   uid: optutscontainer
-- role: build-dependency
-  uid: optjffs2summary
 target: cpukit/include/rtems/score/cpuopts.h
 type: build

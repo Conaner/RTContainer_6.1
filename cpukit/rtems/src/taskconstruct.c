@@ -52,6 +52,7 @@
 #include <rtems/score/userextimpl.h>
 #include <rtems/sysinit.h>
 
+#include <stdlib.h>
 #include <string.h>
 
 #define STATUS_ASSERT( status ) \
@@ -258,58 +259,62 @@ rtems_status_code _RTEMS_tasks_Create(
     );
     status = _Status_Get( score_status );
     
-    // 任务创建即加入到相应类型容器的根容器中
+    // 任务创建后加入到相应类型容器的根容器中
   #if defined(RTEMSCFG_PID_CONTAINER) || defined(RTEMSCFG_UTS_CONTAINER) || defined(RTEMSCFG_MNT_CONTAINER) || defined(RTEMSCFG_NET_CONTAINER) || defined(RTEMSCFG_IPC_CONTAINER)
-  if (status) {
       Container *newContainer = malloc(sizeof(Container));
-      if (newContainer) {
-          memset(newContainer, 0, sizeof(Container));
-  // PID
-  #ifdef RTEMSCFG_PID_CONTAINER
-          newContainer->pidContainer = rtems_container_get_root()->pidContainer;    
-          newContainer->pidContainerListHead = NULL;
-          if (newContainer->pidContainer)
-          {
-            // newContainer->pidContainer->rc++; 将任务加入到容器中的函数中包含了这一步
-            rtems_pid_container_add_task(newContainer->pidContainer, the_thread);
-          }
-
-  #endif
-  // UTS
-  #ifdef RTEMSCFG_UTS_CONTAINER
-          newContainer->utsContainer = rtems_container_get_root()->utsContainer;
-          newContainer->utsContainerListHead = NULL;
-          if (newContainer->utsContainer) {
-            newContainer->utsContainer->rc++;  
-          }
-  #endif
-  // MNT
-  #ifdef RTEMSCFG_MNT_CONTAINER
-          newContainer->mntContainer = rtems_container_get_root()->mntContainer;
-          newContainer->mntContainerListHead = NULL;
-          if (newContainer->mntContainer) {
-            newContainer->mntContainer->rc++;
-          }
-  #endif
-  // NET
-  #ifdef RTEMSCFG_NET_CONTAINER
-          newContainer->netContainer = rtems_container_get_root()->netContainer;
-          newContainer->netContainerListHead = NULL;
-          if (newContainer->netContainer) {
-            newContainer->netContainer->rc++;
-          }
-  #endif
-  // IPC
-  #ifdef RTEMSCFG_IPC_CONTAINER
-          newContainer->ipcContainer = rtems_container_get_root()->ipcContainer;
-          newContainer->ipcContainerListHead = NULL;
-          if (newContainer->ipcContainer) {
-            newContainer->ipcContainer->rc++;
-          }
-  #endif
-          the_thread->container = newContainer;
+      if (newContainer == NULL) {
+        _Objects_Free( &_RTEMS_tasks_Information.Objects, &the_thread->Object );
+#if defined(RTEMS_MULTIPROCESSING)
+        if ( is_global ) {
+          _Objects_MP_Free_global_object( the_global_object );
+        }
+#endif
+        _Objects_Allocator_unlock();
+        return RTEMS_NO_MEMORY;
       }
-  }
+
+      memset(newContainer, 0, sizeof(Container));
+  #ifdef RTEMSCFG_PID_CONTAINER
+      newContainer->pidContainer = rtems_container_get_root()->pidContainer;
+      newContainer->pidContainerListHead = NULL;
+      if (newContainer->pidContainer) {
+        rtems_pid_container_add_task(newContainer->pidContainer, the_thread);
+      }
+  #endif
+
+  #ifdef RTEMSCFG_UTS_CONTAINER
+      newContainer->utsContainer = rtems_container_get_root()->utsContainer;
+      newContainer->utsContainerListHead = NULL;
+      if (newContainer->utsContainer) {
+        newContainer->utsContainer->rc++;
+      }
+  #endif
+
+  #ifdef RTEMSCFG_MNT_CONTAINER
+      newContainer->mntContainer = rtems_container_get_root()->mntContainer;
+      newContainer->mntContainerListHead = NULL;
+      if (newContainer->mntContainer) {
+        newContainer->mntContainer->rc++;
+      }
+  #endif
+
+  #ifdef RTEMSCFG_NET_CONTAINER
+      newContainer->netContainer = rtems_container_get_root()->netContainer;
+      newContainer->netContainerListHead = NULL;
+      if (newContainer->netContainer) {
+        newContainer->netContainer->rc++;
+      }
+  #endif
+
+  #ifdef RTEMSCFG_IPC_CONTAINER
+      newContainer->ipcContainer = rtems_container_get_root()->ipcContainer;
+      newContainer->ipcContainerListHead = NULL;
+      if (newContainer->ipcContainer) {
+        newContainer->ipcContainer->rc++;
+      }
+  #endif
+
+      the_thread->container = newContainer;
   #endif
 
   } else {

@@ -80,46 +80,13 @@ static void set_startloc(
     if (rtems_filesystem_is_delimiter(c)) {
       ++ctx->path;
       --ctx->pathlen;
-
-#ifdef RTEMSCFG_MNT_CONTAINER
-      const char *adjusted_path = get_adjusted_eval_path();
-      if (adjusted_path && adjusted_path != ctx->path) {
-        if (adjusted_path[0] == '/') {
-          ctx->path = adjusted_path + 1;
-          ctx->pathlen = strlen(ctx->path);
-        } else if (adjusted_path[0] == '\0') {
-          ctx->path = "";
-          ctx->pathlen = 0;
-        } else {
-          ctx->path = adjusted_path;
-          ctx->pathlen = strlen(ctx->path);
-        }
-      }
-#endif
-
-    //   ctx->startloc = rtems_filesystem_global_location_obtain(
-    //     &ctx->rootloc
-    //   );
-    // } else {
-    //   ctx->startloc = rtems_filesystem_global_location_obtain(
-    //     global_current_ptr
-    //   );
-    // }
-      ctx->startloc = ctx->rootloc;
-      if (ctx->startloc && !rtems_filesystem_global_location_is_null(ctx->startloc)) {
-        ++ctx->startloc->reference_count;
-      }
+      ctx->startloc = rtems_filesystem_global_location_obtain(
+        &ctx->rootloc
+      );
     } else {
-      ctx->startloc = global_current_ptr;
-      
-      if (!ctx->startloc || 
-          !ctx->startloc->location.mt_entry ||
-          ctx->startloc->reference_count <= 0) {
-        if (ctx->startloc) {
-          rtems_filesystem_global_location_release(ctx->startloc, true);
-        }
-        ctx->startloc = rtems_filesystem_global_location_obtain(&rtems_filesystem_current);
-      }
+      ctx->startloc = rtems_filesystem_global_location_obtain(
+        global_current_ptr
+      );
     }
   } else {
     ctx->rootloc = rtems_filesystem_global_location_obtain_null();
@@ -266,7 +233,7 @@ rtems_filesystem_eval_path_start(
   ctx->pathlen = effective_pathlen;
   ctx->flags = eval_flags;
   
-  set_startloc(ctx, container_root_loc, container_current_loc);
+  set_startloc(ctx, &container_root_loc, &container_current_loc);
   
   rtems_filesystem_instance_lock(&ctx->startloc->location);
   

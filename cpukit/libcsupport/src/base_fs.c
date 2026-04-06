@@ -71,7 +71,7 @@ void rtems_filesystem_initialize( void )
    */
 
   rv = mkdir( "/dev", S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH );
-  if ( rv != 0 )
+  if ( rv != 0 && errno != EEXIST && errno != ENXIO )
     rtems_fatal_error_occurred( 0xABCD0003 );
 
   /*

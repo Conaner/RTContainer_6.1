@@ -131,11 +131,17 @@ static void release_with_count(
   rtems_filesystem_mt_entry_declare_lock_context(lock_context);
   bool do_free;
   bool do_unmount;
+  bool is_static_null_location = global_loc == &rtems_filesystem_global_location_null;
+  bool is_static_null_mt_entry = mt_entry == &rtems_filesystem_null_mt_entry;
+
+  if (is_static_null_location) {
+    return;
+  }
 
   rtems_filesystem_mt_entry_lock(lock_context);
   global_loc->reference_count -= count;
-  do_free = global_loc->reference_count == 0;
-  do_unmount = rtems_filesystem_is_ready_for_unmount(mt_entry);
+  do_free = global_loc->reference_count == 0 && !is_static_null_location;
+  do_unmount = !is_static_null_mt_entry && rtems_filesystem_is_ready_for_unmount(mt_entry);
   rtems_filesystem_mt_entry_unlock(lock_context);
 
   if (do_free) {
@@ -243,6 +249,10 @@ void rtems_filesystem_do_unmount(
   rtems_filesystem_mount_table_entry_t *mt_entry
 )
 {
+  if (mt_entry == &rtems_filesystem_null_mt_entry) {
+    return;
+  }
+
   rtems_filesystem_mt_lock();
   rtems_chain_extract_unprotected(&mt_entry->mt_node);
   rtems_filesystem_mt_unlock();

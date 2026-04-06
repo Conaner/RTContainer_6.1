@@ -103,7 +103,11 @@ struct mbuf_queue {
     TAILQ_HEAD(, mbuf_queue_entry) head;
     int count;
     int max_size;
+#if ISR_LOCK_NEEDS_OBJECT
     ISR_lock_Control lock;  /* ISR spinlock for thread-safe access */
+#else
+    int lock;
+#endif
 };
 
 /*

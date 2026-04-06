@@ -39,6 +39,8 @@
 
 #include <sys/stat.h>
 
+#include <string.h>
+
 #include <rtems/libio_.h>
 
 int rtems_filesystem_mknod(
@@ -91,10 +93,42 @@ int mknod( const char *path, mode_t mode, dev_t dev )
   const rtems_filesystem_location_info_t *currentloc =
     rtems_filesystem_eval_path_start( &ctx, path, eval_flags );
 
+  const char *token = rtems_filesystem_eval_path_get_token( &ctx );
+  size_t tokenlen = rtems_filesystem_eval_path_get_tokenlen( &ctx );
+  const rtems_filesystem_location_info_t *effective_parentloc = currentloc;
+
+  if ( S_ISDIR( mode ) && tokenlen == 0 && path != NULL ) {
+    const char *end = path + strlen( path );
+
+    while ( end > path && end[-1] == '/' ) {
+      --end;
+    }
+
+    if ( end > path ) {
+      const char *begin = end;
+
+      while ( begin > path && begin[-1] != '/' ) {
+        --begin;
+      }
+
+      if ( begin < end ) {
+        token = begin;
+        tokenlen = (size_t) (end - begin);
+      }
+    }
+  }
+
+  if ( S_ISDIR( mode ) && effective_parentloc != NULL &&
+       rtems_filesystem_location_is_null( effective_parentloc ) &&
+       rtems_filesystem_root != NULL &&
+       !rtems_filesystem_global_location_is_null( rtems_filesystem_root ) ) {
+    effective_parentloc = &rtems_filesystem_root->location;
+  }
+
   rv = rtems_filesystem_mknod(
-    currentloc,
-    rtems_filesystem_eval_path_get_token( &ctx ),
-    rtems_filesystem_eval_path_get_tokenlen( &ctx ),
+    effective_parentloc,
+    token,
+    tokenlen,
     mode,
     dev
   );

@@ -143,8 +143,20 @@ static int register_subordinate_file_system(
   rtems_filesystem_eval_path_context_t ctx;
   int eval_flags = RTEMS_FS_PERMS_RWX
     | RTEMS_FS_FOLLOW_LINK;
+  /*
+   * 挂载时始终用全局文件系统解析挂载点路径，确保能找到目标目录节点。
+   * 文件访问走 eval_path_start（容器命名空间），挂载操作必须走全局路径。
+   */
+#ifdef RTEMSCFG_MNT_CONTAINER
+  rtems_filesystem_location_info_t *currentloc =
+    rtems_filesystem_eval_path_start_with_root_and_current(
+      &ctx, target, strlen( target ), eval_flags,
+      &rtems_filesystem_root, &rtems_filesystem_current
+    );
+#else
   rtems_filesystem_location_info_t *currentloc =
     rtems_filesystem_eval_path_start( &ctx, target, eval_flags );
+#endif
 
   if ( !rtems_filesystem_location_is_instance_root( currentloc ) ) {
     rtems_filesystem_location_info_t targetloc;

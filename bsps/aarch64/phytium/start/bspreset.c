@@ -72,8 +72,6 @@ void rtems_monitor_reset_cmd(
     }
 }
 #else
-extern bool _CPU_SMP_Reset_system( void );
-
 void rtems_monitor_reset_cmd(
   int argc,
   char **argv,
@@ -81,12 +79,12 @@ void rtems_monitor_reset_cmd(
   bool verbose
 )
 {
+  (void) argc;
+  (void) argv;
+  (void) command_arg;
+  (void) verbose;
+
   printk("System reseting ...\n");
-
-  _CPU_SMP_Reset_system();
-
-  while (true) {
-    /* wait for psci reset */
-  }
+  bsp_reset(RTEMS_FATAL_SOURCE_APPLICATION, 0);
 }
 #endif

@@ -8,6 +8,7 @@
         "threadimpl.h": "c",
         "libio_.h": "c",
         "libio.h": "c",
-        "random": "c"
+        "random": "c",
+        "container.h": "c"
     }
 }

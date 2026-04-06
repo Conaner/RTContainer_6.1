@@ -3,7 +3,8 @@ build-type: test-program
 cflags: []
 copyrights:
 - Copyright (C) 2020 embedded brains GmbH & Co. KG
-cppflags: []
+cppflags:
+- -DCONFIGURE_FILESYSTEM_IMFS
 cxxflags: []
 enabled-by: RTEMSCFG_MNT_CONTAINER
 features: c cprogram

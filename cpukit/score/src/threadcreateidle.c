@@ -51,6 +51,10 @@
 #include <rtems/score/tls.h>
 #include <rtems/score/userextimpl.h>
 
+#ifdef RTEMSCFG_CONTAINER
+#include <stdlib.h>
+#endif
+
 #include <string.h>
 
 static void _Thread_Create_idle_for_CPU(
@@ -113,6 +117,7 @@ static void _Thread_Create_idle_for_CPU(
 
   idle->is_idle = true;
 
+#ifdef RTEMSCFG_CONTAINER
   Container *idleContainer = malloc(sizeof(Container));
   if (idleContainer) {
     memset(idleContainer, 0, sizeof(Container));
@@ -148,6 +153,7 @@ static void _Thread_Create_idle_for_CPU(
 #endif
     idle->container = idleContainer;
   }
+#endif
 
   idle->Start.Entry.adaptor = _Thread_Entry_adaptor_idle;
   idle->Start.Entry.Kinds.Idle.entry = _Thread_Idle_body;

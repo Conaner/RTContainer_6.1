@@ -37,6 +37,22 @@ links:
 - role: build-dependency
   uid: paranoia
 - role: build-dependency
+  uid: test_mnt
+- role: build-dependency
+  uid: test_net_if
+- role: build-dependency
+  uid: test_net_loopback
+- role: build-dependency
+  uid: test_net_port
+- role: build-dependency
+  uid: test_ipc_queue
+- role: build-dependency
+  uid: test_ipc_semaphore
+- role: build-dependency
+  uid: test_pid
+- role: build-dependency
+  uid: test_uts
+- role: build-dependency
   uid: ticker
 - role: build-dependency
   uid: unlimited

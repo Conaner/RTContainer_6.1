@@ -75,7 +75,6 @@ source:
 - cpukit/libnetworking/net/if.c
 - cpukit/libnetworking/net/if_ethersubr.c
 - cpukit/libnetworking/net/if_loop.c
-- cpukit/libnetworking/net/if_ppp.c
 - cpukit/libnetworking/net/if_veth.c
 - cpukit/libnetworking/netinet/if_ether.c
 - cpukit/libnetworking/netinet/igmp.c
