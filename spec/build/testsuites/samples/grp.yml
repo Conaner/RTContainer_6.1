@@ -73,6 +73,10 @@ links:
 - role: build-dependency
   uid: test_pid
 - role: build-dependency
+  uid: test_interrupt_latency
+- role: build-dependency
+  uid: test_switch_latency
+- role: build-dependency
   uid: test_uts
 - role: build-dependency
   uid: ticker
