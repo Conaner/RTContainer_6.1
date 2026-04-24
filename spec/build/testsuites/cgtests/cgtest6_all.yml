@@ -2,18 +2,18 @@ SPDX-License-Identifier: CC-BY-SA-4.0 OR BSD-2-Clause
 build-type: test-program
 cflags: []
 copyrights:
-- Copyright (C) 2020 embedded brains GmbH & Co. KG
+- Copyright (C) 2026 lyc
 cppflags: []
 cxxflags: []
-enabled-by: RTEMSCFG_PID_CONTAINER
+enabled-by: RTEMS_CGROUP
 features: c cprogram
 includes: []
 ldflags: []
 links: []
 source:
-- testsuites/samples/pidContainer/test_pid.c
+- testsuites/cgtests/cgtest6_all_mem_calc/init.c
 stlib: []
-target: testsuites/samples/test_pid.exe
+target: testsuites/cgtests/cgtest6_all_mem_calc.exe
 type: build
 use-after: []
 use-before: []

@@ -19,7 +19,7 @@
 #ifdef RTEMSCFG_NET_CONTAINER
 #include <rtems/score/netContainer.h>
 #else
-extern struct ifnet *ifnet;
+extern struct ifnet *ifnet __attribute__((weak));
 #endif
 #endif
 
